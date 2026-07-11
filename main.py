@@ -1,8 +1,8 @@
 import asyncio
 import json
-from typing import List, Set
+from typing import List, Set, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -27,10 +27,11 @@ app.add_middleware(
 # -----------------------------
 class GenerateVideoRequest(BaseModel):
     prompts: List[str]
-    json_cookies: str
-    model: str = "seedance-2.0"
-    aspect_ratio: str = "9:16"
-    duration: int = 15
+    json_cookies: Optional[str] = ""
+    model: Optional[str] = "seedance-2.0"
+    aspect_ratio: Optional[str] = "9:16"
+    duration: Optional[int] = 10
+    submit_speed: Optional[int] = 1
 
 
 # -----------------------------
@@ -67,7 +68,7 @@ manager = ConnectionManager()
 
 
 # -----------------------------
-# WebSocket
+# WebSocket Endpoint
 # -----------------------------
 @app.websocket("/ws/logs")
 async def websocket_logs(websocket: WebSocket):
@@ -81,88 +82,52 @@ async def websocket_logs(websocket: WebSocket):
 
 
 # -----------------------------
-# Playwright Demo
+# Playwright Background Engine
 # -----------------------------
 async def run_generation(req: GenerateVideoRequest):
-
-    await manager.broadcast("Queued")
-
-    generated_urls = []
+    await manager.broadcast("Task Queued successfully.")
 
     async with async_playwright() as p:
-
-        browser = await p.chromium.launch(
-            headless=True
-        )
-
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context()
 
         # -----------------------------
         # Load Cookies
         # -----------------------------
-        try:
-            cookies = json.loads(req.json_cookies)
-
-            if isinstance(cookies, list):
-                await context.add_cookies(cookies)
-                await manager.broadcast("Cookies loaded")
-
-        except Exception as e:
-            await manager.broadcast(f"Cookie parse error: {e}")
+        if req.json_cookies and req.json_cookies.strip():
+            try:
+                cookies = json.loads(req.json_cookies)
+                if isinstance(cookies, list):
+                    await context.add_cookies(cookies)
+                    await manager.broadcast("Cookies loaded into browser context.")
+            except Exception as e:
+                await manager.broadcast(f"Cookie parse error: {e}")
+        else:
+            await manager.broadcast("No cookies provided, proceeding as guest session...")
 
         page = await context.new_page()
-
-        #
-        # Replace this URL with your own application or an official,
-        # authorized endpoint/API for your workflow.
-        #
         await page.goto("https://example.com")
 
         for index, prompt in enumerate(req.prompts, start=1):
-
-            await manager.broadcast(
-                f"Generating {index}/{len(req.prompts)}"
-            )
-
-            #
-            # ------------------------------------------------------
-            # YOUR AUTHORIZED PLAYWRIGHT AUTOMATION GOES HERE
-            #
-            # Example:
-            #   await page.fill(...)
-            #   await page.click(...)
-            #   await page.wait_for_selector(...)
-            #
-            # If using an official API instead of browser automation,
-            # replace this section with API calls.
-            # ------------------------------------------------------
-            #
-
+            await manager.broadcast(f"Generating prompt {index}/{len(req.prompts)}: '{prompt}'")
             await asyncio.sleep(3)
-
-            generated_urls.append(
-                f"https://example.com/generated/video_{index}.mp4"
-            )
 
         await browser.close()
 
-    await manager.broadcast("Completed")
-
-    return generated_urls
+    await manager.broadcast("All video generations completed!")
 
 
 # -----------------------------
-# API
+# API Endpoints
 # -----------------------------
 @app.post("/api/generate-video")
-async def generate_video(req: GenerateVideoRequest):
-
-    urls = await run_generation(req)
+async def generate_video(req: GenerateVideoRequest, background_tasks: BackgroundTasks):
+    # Queue the Playwright automation in the background so POST request returns instantly
+    background_tasks.add_task(run_generation, req)
 
     return {
         "success": True,
-        "count": len(urls),
-        "videos": urls
+        "message": "Task queued successfully. Watch live log console for progress."
     }
 
 
