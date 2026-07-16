@@ -1,6 +1,6 @@
 fastapi
 uvicorn
 playwright
-websockets
-python-multipart
-pydantic
+pandas
+boto3
+requests
