@@ -109,7 +109,7 @@ async def run_generation(req: GenerateVideoRequest):
                     await context.add_cookies(cookies)
                     await manager.broadcast("Cookies loaded successfully.")
 
-            except Exception as e:
+        except Exception as e:
                 await manager.broadcast(f"Cookie error: {e}")
 
         else:
@@ -133,7 +133,7 @@ async def run_generation(req: GenerateVideoRequest):
        except Exception as e:
             await manager.broadcast(f"Navigation failed: {e}")
 
-for index, prompt in enumerate(req.prompts, start=1):
+        for index, prompt in enumerate(req.prompts, start=1):
             task_id = f"video_{uuid.uuid4().hex[:8]}"
             local_video_path = f"/tmp/{task_id}.mp4"
 
@@ -201,7 +201,7 @@ for index, prompt in enumerate(req.prompts, start=1):
 
         await browser.close()
 
-   await manager.broadcast("All tasks completed.")
+    await manager.broadcast("All tasks completed.")
 
 @app.post("/api/generate-video")
 async def generate_video(
