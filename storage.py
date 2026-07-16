@@ -14,7 +14,7 @@ def save_to_cloud(task_id: str, file_source: str):
     file_name = f"{task_id}.mp4"
     local_path = f"/tmp/{file_name}"
 
-    # 1. Prepare local video file
+    # 1. Download temp video if web URL, or use local path
     if file_source.startswith("http://") or file_source.startswith("https://"):
         print(f"📥 Downloading temporary file from {file_source}...")
         res = requests.get(file_source, stream=True)
