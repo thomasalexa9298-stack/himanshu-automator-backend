@@ -130,9 +130,10 @@ async def run_generation(req: GenerateVideoRequest):
 
             await manager.broadcast("Website loaded successfully.")
 
-        except Exception as e:
+       except Exception as e:
             await manager.broadcast(f"Navigation failed: {e}")
-                    for index, prompt in enumerate(req.prompts, start=1):
+
+for index, prompt in enumerate(req.prompts, start=1):
             task_id = f"video_{uuid.uuid4().hex[:8]}"
             local_video_path = f"/tmp/{task_id}.mp4"
 
@@ -200,8 +201,9 @@ async def run_generation(req: GenerateVideoRequest):
 
         await browser.close()
 
-    await manager.broadcast("All tasks completed.")
-    @app.post("/api/generate-video")
+   await manager.broadcast("All tasks completed.")
+
+@app.post("/api/generate-video")
 async def generate_video(
     req: GenerateVideoRequest,
     background_tasks: BackgroundTasks,
